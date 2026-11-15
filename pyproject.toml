@@ -27,6 +27,11 @@ src = [".", "scripts"]
 # modern syntax upgrades, and naming conventions.
 extend-select = ["I", "B", "UP", "N"]
 
+[tool.ruff.lint.per-file-ignores]
+# Django generates migrations with list class attributes (dependencies,
+# operations); RUF012 would flag every one.
+"**/migrations/*.py" = ["RUF012"]
+
 [tool.pytest.ini_options]
 # "." lets tests import the Django project; "scripts" lets tests
 # `import search_books` while scripts/ stays a plain folder.

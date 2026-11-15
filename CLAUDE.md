@@ -14,6 +14,7 @@ A private, per-user reading tracker built with Django that finds books through t
 ## Commands
 
 - `uv run python manage.py migrate`: apply database migrations
+- `uv run python manage.py seed_demo`: create the `demo` user and ~25 saved books (offline, safe to rerun)
 - `uv run python manage.py runserver`: start the dev server at http://127.0.0.1:8000/
 - `uv run python manage.py tailwind build`: build `static/css/tailwind.css` from `styles/source.css` (rebuild and commit after template class changes)
 - `uv run pytest`: run the full offline test suite, including the script tests

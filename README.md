@@ -38,6 +38,23 @@ HTMX is a pinned local file at `static/js/htmx.min.js` (v2.0.4).
 
 `DJANGO_SECRET_KEY` can be set in `.env`; a development-only key is used otherwise.
 
+### Demo data
+
+```bash
+uv run python manage.py seed_demo
+```
+
+This creates (or reuses) a `demo` user and about 25 saved books across all four
+statuses, then prints the demo password. Log in with it to see the collection
+right away. The book data is built into the command (real Open Library work
+keys, cover IDs, and page counts), so it works offline. A few books
+deliberately have no cover, which shows the placeholder. Running it again skips
+books the demo user already has.
+
+**The demo password is for local development only.** It is printed by the
+command and written in its source, so never use it, or the demo account, on a
+deployed site.
+
 ## Scripts
 
 ### `scripts/search_books.py`: search Open Library from the console

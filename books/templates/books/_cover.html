@@ -1,0 +1,10 @@
+{# No cover ID: placeholder. Cover ID: the image, which swaps to the hidden placeholder if it fails to load. #}
+<div class="overflow-hidden bg-base-300 aspect-[2/3] {{ cover_class }}">
+  {% if book.cover_url %}
+    <img class="w-full h-full object-cover" loading="lazy" src="{{ book.cover_url }}" alt="Cover of {{ book.title }}"
+         onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+    <div hidden class="w-full h-full">{% include "books/_cover_placeholder.html" %}</div>
+  {% else %}
+    {% include "books/_cover_placeholder.html" %}
+  {% endif %}
+</div>

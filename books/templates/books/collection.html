@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}My Collection · MyChapterCollection{% endblock %}
+
+{% block content %}
+<section>
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight">My Collection</h1>
+      <p class="text-sm text-base-content/60">{{ books|length }} book{{ books|length|pluralize }}</p>
+    </div>
+    <a href="{% url 'books:search' %}" class="btn btn-primary btn-sm">Find books</a>
+  </div>
+
+  {% if books %}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-6">
+      {% for book in books %}
+        {% include "books/_book_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="flex flex-col items-center text-center py-16 gap-3" data-empty-collection>
+      <div class="text-4xl" aria-hidden="true">📚</div>
+      <div class="font-semibold">Your collection is empty</div>
+      <div class="text-sm text-base-content/60">Search Open Library to find books and save them here.</div>
+      <a href="{% url 'books:search' %}" class="btn btn-sm btn-outline">Find books</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

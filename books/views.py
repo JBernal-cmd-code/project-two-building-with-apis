@@ -1,7 +1,7 @@
 """Website views for saved books.
 
-Phase 1 placeholders. The real collection page arrives in Phase 2 and the
-search page in Phase 4.
+My Collection uses only local data and never calls Open Library. The search
+page is still a placeholder until Phase 4.
 """
 
 from django.contrib.auth.decorators import login_required
@@ -10,7 +10,9 @@ from django.shortcuts import render
 
 @login_required
 def collection(request):
-    return render(request, "books/placeholder.html", {"page_title": "My Collection"})
+    # Privacy: every query starts from the current user's books.
+    books = request.user.saved_books.all()
+    return render(request, "books/collection.html", {"books": books})
 
 
 @login_required

@@ -28,6 +28,96 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Phase 2: SavedBook model, demo seed, and collection grid
+
+### Prompts
+1. `/implement @prd/mychaptercollection.md @plans/mychaptercollection.md
+   implement Phase 2. Show me the TDD candidates to approve first, then go
+   through RED and GREEN without stopping unless something unexpected happens.`
+2. Approved, all three. Also add a fourth TDD behavior: My Collection only
+   shows the logged-in user's books, never another user's. That's the core of
+   requirement 6. Make sure the other model rules (title required, rating 1-5,
+   current page not above total pages, unique owner plus work key, default
+   status) and the grid display rules get normal tests.
+3. Verified in the browser. Covers and placeholders, badge colors, stars,
+   progress bars, the welcome back message, privacy with a new user, and
+   offline mode all work. I'm okay with Finished auto-correcting the current
+   page instead of rejecting it. One fix: long titles like The Hitchhiker's
+   Guide to the Galaxy wrap to two lines and push the author and badge lower
+   than the other cards in the row. Limit titles to two lines with an
+   ellipsis, and give every card's title the same two-line height so all the
+   cards in a row line up. Show the full title on hover.
+4. The title fix works, the cards line up now. Write the PROMPTS.md log, and
+   after it's saved, commit and push with the message "Phase 2: SavedBook
+   model, demo seed, and collection grid".
+
+### Summary
+- **Outcome:** Built Phase 2 of the plan:
+  - the `SavedBook` model and migration with every PRD field. It has:
+    - a `WorkKeyField` that stores the short `OL…W` form, plus shared
+      `normalize_work_key` and `validate_work_key` helpers for the Phase 6 API
+    - a non-blank title validator
+    - rating 1–5 or empty, and total pages 1 or more
+    - the current-page-not-above-total rule
+    - Finished auto-fill in both `save()` and `clean()`
+    - an owner plus work key unique constraint with the message "This book
+      is already in your collection."
+    - display helpers (author fallback, cover URL, progress percent, when to
+      show progress)
+  - a `seed_demo` command that creates or reuses `demo`, prints its
+    local-only password, and adds 25 hard-coded books. The work keys, cover
+    IDs, and page counts were looked up once from Open Library, and every
+    cover was checked with `?default=false`. The books cover all four
+    statuses, with 4 lacking a cover and 3 lacking total pages. Reruns skip
+    books the user already has.
+  - a login-required My Collection page built from the current user's books.
+    It shows a 5-per-row cover grid with:
+    - the image, or the plain-book placeholder (with an `onerror` swap)
+    - an "Unknown author" fallback
+    - colored soft status badges
+    - stars only when rated
+    - a progress bar only when total pages is known, progress is above 0,
+      and the status is not Want to read
+    - an empty state
+  - the model registered in the admin, a README "Demo data" section with the
+    local-only password warning, and `seed_demo` added to CLAUDE.md
+
+  TDD covered four behaviors, each RED then GREEN: work key normalization
+  and validation, Finished auto-fill, the seed being safe to run twice, and
+  the collection showing only the owner's books. Normal tests cover the other
+  model rules, the rest of the seed command, and every grid display rule. The
+  suite went from 44 to 97 passing tests, with the script tests unchanged.
+  Ruff and `manage.py check` are clean. The user verified everything in the
+  browser, including offline mode and privacy with a new user.
+- **Deviations:**
+  - The user added a fourth TDD behavior (collection privacy) beyond the
+    skill's limit of three, and asked for normal tests of the other model
+    rules and the grid display rules.
+  - After the browser check, the user asked for card titles clamped to two
+    lines with an ellipsis, a fixed two-line height so cards line up, and the
+    full title on hover. Done with `line-clamp-2 h-[2lh]` and a `title`
+    attribute, plus a test for the hover title.
+  - The user accepted my judgment call that Finished corrects an
+    overshooting current page instead of rejecting it.
+  - Other judgment calls I made, all mentioned in my reports:
+    - kept the Open Library values exactly as returned, including Little
+      Women's 1848 year and translators in some author lists
+    - switched Django list class attributes to tuples
+    - exempted only generated migrations from Ruff's RUF012
+- **Sideways:**
+  - The seed test's RED was a `ValidationError` crash from the model's
+    duplicate check, not an assertion failure. I kept it and flagged it,
+    because the crash was the missing behavior itself, not missing scaffolding.
+  - I first mistyped two author names in the seed data ("Daḳner", and a
+    precomposed "Brontë"). I caught them against the lookup output before any
+    test ran and fixed them to Open Library's exact strings.
+  - Ruff 0.17's defaults now include RUF012, which Phase 1 never triggered.
+    Switching `Meta` to tuples changed the migration state, so the
+    uncommitted `0001_initial` was regenerated twice.
+  - My first grep for escaped Tailwind classes (`xl:grid-cols-5`,
+    `aspect-[2/3]`) found nothing because of CSS escaping. A Grep with the
+    escaped pattern confirmed they were built.
+
 ## 2026-11-14 — Phase 1: project skeleton, accounts, and app shell
 
 ### Prompts
