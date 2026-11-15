@@ -28,6 +28,83 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-15 — Phase 3: Book detail, edit, and remove
+
+### Prompts
+1. `/implement @prd/mychaptercollection.md @plans/mychaptercollection.md
+   implement Phase 3. Show me the TDD candidates to approve first, then go
+   through RED and GREEN without stopping unless something unexpected happens.`
+2. Approved, all three. Make sure the normal tests also cover an invalid edit
+   (current page above total pages, rating out of range) showing field errors
+   without saving, and notes with HTML showing as escaped text.
+3. Verified in the browser. Card links, valid and invalid edits, Finished
+   auto-fill, escaped notes, the remove dialog with cancel and confirm,
+   privacy with another user (404), and GET on delete (405, book not deleted)
+   all work. Write the PROMPTS.md log, and after it's saved, commit and push
+   with the message "Phase 3: Book detail, edit, and remove".
+
+### Summary
+- **Outcome:** Built Phase 3 of the plan:
+  - `/books/<pk>/` (`books:detail`), login-required and owner-only through a
+    `get_own_book` helper that looks up from `request.user.saved_books`, so
+    another user's book is a 404. It shows:
+    - a larger cover or the plain-book placeholder
+    - title, authors, and first publish year
+    - the status badge, stars, and "Page X of Y · N%" progress
+    - notes as escaped plain text
+  - `SavedBookEditForm` (`books/forms.py`) with only status, current page,
+    total pages, rating (an "Unrated" choice plus 1–5), and notes. The
+    model's `clean()` runs through it, so the page rule and Finished auto-fill
+    apply. Saving uses Post/Redirect/Get with a "Saved" flash. Invalid input
+    re-renders with field errors.
+  - a Remove button that opens a DaisyUI `<dialog>` warning that status,
+    rating, and notes are deleted too. Its confirm button posts to
+    `/books/<pk>/delete/` (`books:delete`), which is `@require_POST`. After
+    deleting, it redirects to My Collection with "Removed '<title>' from your
+    collection."
+  - collection cards wrapped in a link to the book's detail page, plus a
+    `SavedBook.get_absolute_url()`
+  - the Tailwind CSS rebuilt for the new template classes
+
+  TDD covered three behaviors, each RED on an assertion and then GREEN:
+  another user gets 404 on view, edit, and delete (RED `200 == 404` against
+  stub views); an edit saves the tracking fields and ignores posted book facts
+  (RED `'want_to_read' != 'reading'`); delete refuses GET with 405 and a POST
+  deletes, redirects, and shows the message (RED `200 == 405`). Normal tests
+  cover login required, the page content and locked fields not appearing in
+  the form, the cover placeholder, card links, the "Saved" redirect, invalid
+  edits, Finished auto-fill through the form, escaped notes, and the remove
+  dialog. The invalid edits checked are current page above total, rating 6,
+  rating 0, total pages 0, current page −1, and an unknown status; each shows
+  its field error and leaves the row unchanged. The suite went from 97 to 114
+  passing tests, with the script tests unchanged. Ruff check and format are
+  clean. The user verified everything in the browser.
+- **Deviations:**
+  - The user approved all three TDD candidates and asked for normal tests of
+    invalid edits (current page above total, rating out of range) and escaped
+    HTML notes. Both were added; the invalid-edit test also covers total
+    pages 0, a negative current page, and an unknown status.
+  - My own judgment calls, mentioned in the report:
+    - after a rejected edit, the view reloads the book from the database so
+      the header shows the stored values while the form keeps what was typed
+      (validation had copied the rejected values onto the instance)
+    - the detail page shows progress whenever total pages is known, including
+      0%, unlike the cards, which hide it for Want to read and page 0
+    - the form's fields are rendered by hand in the template rather than
+      through the accounts `_form_fields.html` include, which only handles
+      inputs, not selects or a textarea
+- **Sideways:**
+  - Ruff flagged RUF012 on an unused `widgets` dict in the form's `Meta`. It
+    was removed instead of suppressed, since the template renders the textarea
+    itself.
+  - `ruff format` reformatted the new test file once.
+  - To confirm the status and rating selects pre-select the right option on
+    GET and after an invalid POST, I ran a throwaway pytest file from the
+    scratchpad, outside the repo. Both cases were correct.
+  - The first try at adding this entry failed because the text I anchored on
+    didn't match the file's indentation, so I anchored on the Phase 2 heading
+    instead.
+
 ## 2026-11-14 — Phase 2: SavedBook model, demo seed, and collection grid
 
 ### Prompts

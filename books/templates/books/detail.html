@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load book_display %}
+
+{% block title %}{{ book.title }} · MyChapterCollection{% endblock %}
+
+{% block content %}
+<a href="{% url 'books:collection' %}" class="link link-hover text-sm text-base-content/60">&larr; My Collection</a>
+
+<div class="mt-4 grid gap-8 md:grid-cols-[14rem_1fr]" data-book-detail>
+  <div class="w-40 sm:w-56 mx-auto md:mx-0">
+    {% include "books/_cover.html" with cover_class="rounded-lg shadow-md ring-1 ring-black/5" %}
+  </div>
+
+  <div class="space-y-6 min-w-0">
+    <header class="space-y-2">
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight break-words">{{ book.title }}</h1>
+      <p class="text-base-content/70">{{ book.authors_display }}</p>
+      {% if book.first_publish_year %}
+        <p class="text-sm text-base-content/60">First published {{ book.first_publish_year }}</p>
+      {% endif %}
+      <div class="flex flex-wrap items-center gap-3 pt-1">
+        {% status_badge book "badge-sm" %}
+        {% stars book.rating "text-base" %}
+      </div>
+      {% if book.progress_percent is not None %}
+        {% with pct=book.progress_percent %}
+        <div class="flex items-center gap-3 max-w-sm pt-1" data-progress>
+          <progress class="progress {% if pct == 100 %}progress-success{% else %}progress-primary{% endif %} h-2 flex-1" value="{{ pct }}" max="100" aria-label="{{ pct }}% read"></progress>
+          <span class="text-sm tabular-nums text-base-content/60">Page {{ book.current_page }} of {{ book.total_pages }} · {{ pct }}%</span>
+        </div>
+        {% endwith %}
+      {% endif %}
+    </header>
+
+    {% if book.notes %}
+      <section>
+        <h2 class="text-sm font-semibold text-base-content/60 uppercase tracking-wider mb-1">Notes</h2>
+        <p class="whitespace-pre-line break-words" data-notes>{{ book.notes }}</p>
+      </section>
+    {% endif %}
+
+    <section class="card bg-base-100 border border-base-300">
+      <form method="post" class="card-body gap-0" novalidate>
+        <h2 class="card-title text-lg mb-2">Update your reading</h2>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div role="alert" class="alert alert-error alert-soft mb-2">
+            {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="grid gap-x-4 sm:grid-cols-2">
+          {% with field=form.status %}
+          <fieldset class="fieldset">
+            <label class="fieldset-legend" for="{{ field.id_for_label }}">Status</label>
+            <select name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="select w-full{% if field.errors %} select-error{% endif %}">
+              {% for value, label in field.field.choices %}
+                <option value="{{ value }}"{% if value == field.value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% for error in field.errors %}<p class="text-error text-sm">{{ error }}</p>{% endfor %}
+          </fieldset>
+          {% endwith %}
+
+          {% with field=form.rating %}
+          <fieldset class="fieldset">
+            <label class="fieldset-legend" for="{{ field.id_for_label }}">Rating</label>
+            <select name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="select w-full{% if field.errors %} select-error{% endif %}">
+              {% for value, label in field.field.choices %}
+                <option value="{{ value }}"{% if value|stringformat:"s" == field.value|default_if_none:""|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% for error in field.errors %}<p class="text-error text-sm">{{ error }}</p>{% endfor %}
+          </fieldset>
+          {% endwith %}
+
+          {% with field=form.current_page %}
+          <fieldset class="fieldset">
+            <label class="fieldset-legend" for="{{ field.id_for_label }}">Current page</label>
+            <input type="number" min="0" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                   value="{{ field.value|default_if_none:'' }}" class="input w-full{% if field.errors %} input-error{% endif %}">
+            {% for error in field.errors %}<p class="text-error text-sm">{{ error }}</p>{% endfor %}
+          </fieldset>
+          {% endwith %}
+
+          {% with field=form.total_pages %}
+          <fieldset class="fieldset">
+            <label class="fieldset-legend" for="{{ field.id_for_label }}">Total pages</label>
+            <input type="number" min="1" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                   value="{{ field.value|default_if_none:'' }}" placeholder="Unknown" class="input w-full{% if field.errors %} input-error{% endif %}">
+            {% for error in field.errors %}<p class="text-error text-sm">{{ error }}</p>{% endfor %}
+          </fieldset>
+          {% endwith %}
+        </div>
+
+        {% with field=form.notes %}
+        <fieldset class="fieldset">
+          <label class="fieldset-legend" for="{{ field.id_for_label }}">Private notes</label>
+          <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}" rows="5"
+                    class="textarea w-full{% if field.errors %} textarea-error{% endif %}">{{ field.value|default_if_none:'' }}</textarea>
+          {% for error in field.errors %}<p class="text-error text-sm">{{ error }}</p>{% endfor %}
+        </fieldset>
+        {% endwith %}
+
+        <div class="card-actions justify-between items-center mt-4">
+          <button type="button" class="btn btn-error btn-outline btn-sm" onclick="remove_modal.showModal()">Remove</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<dialog id="remove_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">Remove this book?</h3>
+    <p class="py-4">
+      &ldquo;{{ book.title }}&rdquo; will be removed from your collection, along with your
+      reading status, rating, and notes. This can't be undone.
+    </p>
+    <div class="modal-action">
+      <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
+      <form method="post" action="{% url 'books:delete' book.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-error">Remove</button>
+      </form>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+{% endblock %}

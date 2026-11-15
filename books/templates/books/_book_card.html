@@ -1,5 +1,6 @@
 {% load book_display %}
 <article class="group" data-book-card>
+  <a href="{{ book.get_absolute_url }}" class="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md">
   {% include "books/_cover.html" with cover_class="rounded-md shadow ring-1 ring-black/5 transition group-hover:-translate-y-0.5 group-hover:shadow-lg" %}
   <div class="mt-2.5 space-y-1">
     {# Always two lines tall (clamped with an ellipsis) so cards in a row line up. #}
@@ -18,4 +19,5 @@
       {% endwith %}
     {% endif %}
   </div>
+  </a>
 </article>

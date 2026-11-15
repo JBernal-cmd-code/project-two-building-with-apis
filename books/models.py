@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.urls import reverse
 
 COVER_URL = "https://covers.openlibrary.org/b/id/{cover_id}-M.jpg"
 
@@ -104,6 +105,9 @@ class SavedBook(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return reverse("books:detail", args=[self.pk])
 
     @property
     def authors_display(self):
