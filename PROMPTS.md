@@ -28,6 +28,60 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Created the initial CLAUDE.md
+
+### Prompts
+1. (Pasted) Create the initial CLAUDE.md for this project.
+
+   Keep it to about 20-30 lines. Include only:
+   1. A one-line project description.
+   2. The approved technology stack and package manager.
+   3. Durable, project-wide architecture decisions already established in the
+      PRD.
+   4. Short pointers to the PRD, plan, and prototypes instead of repeating
+      their details.
+
+   Do not add commands yet because the project tooling has not been installed
+   or verified.
+   Do not predict project structure, paths, template conventions, URL
+   conventions, or testing commands that do not exist yet.
+   Do not copy business requirements, user stories, implementation phases,
+   rejected alternatives, or detailed feature rules into CLAUDE.md.
+   Do not invent new architectural conventions.
+2. Append a session log to PROMPTS.md at the repo root, under today's date,
+   newest entry at the top. Record every prompt I gave you this session, in
+   order, including any corrections. End the entry with a short summary: the
+   outcome, any places where I deviated from a recommended answer or asked
+   follow-up questions, and anything that went sideways.
+
+### Summary
+- **Outcome:** After reading the PRD, the plan, the README, and the list of
+  tracked files, I wrote a 29-line `CLAUDE.md` at the repo root. It has:
+  - a one-line description of the app
+  - the stack: uv, Django with SQLite, DRF with session and token auth,
+    Tailwind and DaisyUI via `django-tailwind-cli` with no Node, HTMX as a
+    pinned local file, and pytest with pytest-django
+  - seven architecture decisions taken from the PRD: book details copied
+    into one local row per user per book, Open Library called only from the
+    search page, owner-scoped queries that return 404 for other users' books,
+    validation in the model, book details locked after saving, offline tests,
+    and the existing script and its tests left unchanged
+  - pointers to the PRD, the plan, the prototype (Variant D), and the API
+    research doc
+
+  It has no commands, URLs, test commands, user stories, or phases. Nothing
+  was committed.
+- **Deviations:** No recommendations were offered and there were no follow-up
+  questions. One judgment call I made myself: I left out the PRD's planned
+  `config` settings package and `books`/`accounts` app names, because those
+  folders don't exist yet and the prompt said not to predict project
+  structure. They can be added once the skeleton is built.
+- **Sideways:** Nothing major. An early file search also matched files inside
+  `.venv`, which added noise but didn't change anything. The first try at
+  adding this entry failed because the text I tried to match didn't match the
+  file exactly, so I anchored the edit on the previous entry's heading
+  instead.
+
 ## 2026-11-14 — Broke the MyChapterCollection PRD into a 6-phase plan
 
 ### Prompts
