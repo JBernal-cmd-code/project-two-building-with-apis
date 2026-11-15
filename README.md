@@ -104,6 +104,64 @@ fails (timeout, no connection, an HTTP error such as 503 or 429, or an
 unreadable response), the script prints a short message and asks for the next
 search instead of crashing.
 
+### `scripts/my_books_api.py`: use the app's own REST API from the console
+
+This script calls this app's API, not Open Library. It logs in to get a
+token, lists your books with query parameters, then updates one field on one
+book with a `PATCH` and prints the book before and after the change.
+
+**1. Set up credentials.** The script logs in as a user of the app. Add these
+to `.env` (copy `.env.example` first if you haven't):
+
+```bash
+API_USERNAME=demo
+API_PASSWORD=<the password seed_demo prints>
+# API_BASE_URL=http://127.0.0.1:8000   # optional, this is the default
+```
+
+Any account of the app works. For the demo user, run
+`uv run python manage.py seed_demo` and copy the password it prints.
+
+**2. Start the Django server.** The script talks to the running app over
+HTTP, so start the server in one terminal and leave it running:
+
+```bash
+uv run python manage.py runserver
+```
+
+**3. Run the script** in a second terminal:
+
+```bash
+uv run scripts/my_books_api.py
+```
+
+By default it lists your `reading` books sorted by title, then moves the first
+book's `current_page` forward 10 pages, but never past the last page. Options:
+
+| Option | Meaning |
+|---|---|
+| `--status STATUS` | `want_to_read`, `reading` (default), `finished`, `abandoned`, or `any` |
+| `--ordering=ORDERING` | `title` (default), `authors`, `-created_at`, `-updated_at`, `-rating`, `-first_publish_year` |
+| `--book-id ID` | The book to update (default: the first book in the list) |
+| `--set FIELD=VALUE` | The change: `status`, `current_page`, `total_pages`, `rating`, or `notes`. Use `rating=none` to clear a rating |
+
+```bash
+uv run scripts/my_books_api.py --status finished --ordering=-rating
+uv run scripts/my_books_api.py --book-id 3 --set status=finished
+uv run scripts/my_books_api.py --book-id 3 --set rating=4
+```
+
+Write orderings that start with `-` with an equals sign (`--ordering=-rating`),
+because otherwise the `-` makes the value look like another option.
+
+The script uses a real `PATCH`, so changes are saved to your collection.
+Instead of crashing, it prints a short message and exits when:
+
+- the server isn't running (it tells you to start `runserver`) or doesn't respond within 10 seconds
+- `API_USERNAME` or `API_PASSWORD` is missing, or the login fails
+- the book id isn't in your collection
+- the server rejects the change, for example `rating=9`, or a `current_page` past the last page
+
 ## Tests and code quality
 
 ```bash
@@ -113,7 +171,9 @@ uv run ruff format .     # format
 ```
 
 The tests replace `requests.get` with fakes, so they check the no-results and
-failure messages without touching the network. An autouse fixture in
+failure messages without touching the network. The `my_books_api.py` tests
+send the script's requests through Django's test client, so they exercise the
+real API views without starting a server. An autouse fixture in
 `tests/conftest.py` blocks sockets, so any test that forgets to fake a request
 fails with "Network access is blocked in tests".
 

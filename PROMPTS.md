@@ -28,6 +28,111 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-15 — API walkthrough and a console script for my own Django API
+
+### Prompts
+1. List my API endpoints in a table. Pick a list endpoint and a related detail
+   endpoint, explain what authentication they need, and give me the URLs I can
+   open in my browser to see the JSON.
+2. Walk me through what happens when someone sends a PATCH to
+   /api/books/<id>/. Show me the URL route, the view, the serializer, and the
+   model, and explain how Django identifies the user, how access is
+   restricted, and how the data is validated.
+3. (Pasted) Create a second script in scripts/ that calls my own Django API,
+   not Open Library. It should:
+   1. Log in with a username and password from .env to get a token, and use
+      the token for the other requests.
+   2. Call the list endpoint with query parameters (like status and ordering)
+      and print the results in a clean, readable way.
+   3. Update one field on one book (like current_page or status) with a
+      PATCH, and print the book before and after the change.
+   4. Show a clear message if the Django server isn't running or the login
+      fails, instead of crashing.
+
+   Add the new .env variables to .env.example with placeholder values, and add
+   a section to the README explaining how to run the script and set up its
+   credentials, including that the Django server has to be running. Don't
+   change scripts/search_books.py.
+4. I ran the script myself. It listed my reading books, the update showed
+   before and after, and the change matched what I saw in the browser. With
+   the server stopped it showed the connection message. Write the PROMPTS.md
+   log, and after it's saved, commit and push with the message "Add API
+   consumer script for my own Django API".
+
+### Summary
+- **Outcome:**
+  - Prompt 1: a table of the `/api/` endpoints. I chose `GET /api/books/` and
+    `GET /api/books/<id>/` and explained the auth: `IsAuthenticated`, with
+    token auth (`Authorization: Token …`) or session auth (logged in on the
+    website, which gives the browsable API). I gave browser URLs, including
+    `?format=json` for raw JSON.
+  - Prompt 2: a walkthrough of PATCH from the router to the response:
+    - `DefaultRouter` maps PATCH to `partial_update`
+    - token auth is tried before session auth, and session PATCHes need CSRF
+    - `get_object()` looks the book up through `request.user.saved_books`, so
+      another user's book is a 404
+    - the serializer makes book facts read-only on update, copies the model
+      fields' validators, and runs the model's `clean()` on a copy with the
+      changes merged in
+    - the page rule and Finished auto-fill live in the model
+  - Prompt 3: `scripts/my_books_api.py`:
+    - logs in at `/api/token/` with `API_USERNAME` and `API_PASSWORD` from
+      `.env` and sends the token on every later request
+    - lists books with `--status` (default `reading`) and `--ordering`
+      (default `title`)
+    - GETs one book, PATCHes one field, and prints the book before and after
+      with a "Changed:" line. By default it updates the first listed book and
+      moves `current_page` forward 10 pages, never past the last page.
+      `--book-id` and `--set FIELD=VALUE` pick another book or change.
+    - prints a clear message, with exit code 1, for:
+      - a server that isn't running (with the `runserver` command to start it)
+      - a timeout
+      - missing credentials
+      - a failed login
+      - a book id that isn't the user's
+      - a validation error from the server
+      - a response that isn't JSON
+      - a server error
+    - uses a 10-second timeout on every request
+  - `.env.example` gained `API_USERNAME` and `API_PASSWORD` placeholders and
+    an optional `API_BASE_URL`. The README gained a section on credentials,
+    starting `runserver` first, the options, examples, and the error cases.
+    `scripts/search_books.py` and its tests are unchanged.
+  - `tests/test_my_books_api.py` has 31 tests. Most run the script against
+    the real API views by sending its `requests.request` calls through
+    Django's test client, so no server or network is needed. The suite went
+    from 255 to 286 passing tests. Ruff check and format are clean.
+  - I ran the script against a live `runserver` as the demo user:
+    - with no server, it printed the connection message
+    - with a wrong password, it printed "Login failed"
+    - a normal run listed 5 reading books and patched Circe from page 0 to 10
+    - `--set rating=9` showed the server's validation message
+    I set Circe back to page 0 afterward. The user then ran it themselves: the
+    reading list, the before/after update (matching the browser), and the
+    connection message with the server stopped all worked.
+- **Deviations:**
+  - No recommendations were offered and there were no follow-up questions.
+  - My own judgment calls, mentioned in my report:
+    - the update step runs by default on the first listed book, so one plain
+      run shows all three steps
+    - `--status` and `--ordering` only accept known values, because the API
+      silently falls back to defaults on unknown ones
+    - the script fetches the book with a separate GET before the PATCH, so
+      "Before" is the server's current state
+    - added tests, which the prompt didn't ask for
+- **Sideways:**
+  - In my endpoint answer I listed three statuses and said unauthenticated
+    requests get "401/403". While reading the code for the PATCH walkthrough,
+    I found the fourth status (`abandoned`) and that an anonymous request is
+    specifically 401 (403 is a session request without CSRF). I corrected
+    both in that answer.
+  - My report for prompt 3 said the new test file had 39 tests. A recount
+    before writing this log showed 31. I corrected it to the user.
+  - The script's argparse can't take an ordering that starts with `-` as a
+    separate argument, so it must be written `--ordering=-rating`. Documented
+    in the help text and the README instead of worked around.
+  - `ruff format` reformatted the script and the test file once.
+
 ## 2026-11-15 — Phase 6: REST API
 
 ### Prompts
