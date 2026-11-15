@@ -28,6 +28,89 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-15 — Traced My Collection search, filters, sorting, and pagination
+
+### Prompts
+1. Walk me through how my My Collection page searches, filters, sorts, and
+   paginates books, without changing any code. Cover the browser controls in
+   the template, the request and its query parameters, the view, the
+   queryset, the Q objects, the filters, the sorting, the pagination, and how
+   the template displays the results and keeps my filters when I change
+   pages. Point me to the specific files and line numbers for each part. Also
+   tell me whether this page's data comes from my database or from Open
+   Library.
+2. (Pasted) I followed the trace in the code files (collection_query.py,
+   views.py, and the page_url tag in book_display.py) and did the
+   predict-and-check in the browser:
+   1. Search "the": I predicted it would show popular books starting with
+      "the". Wrong: it only searched my own saved books and matched "the"
+      anywhere in the title or author, like "J.R.R. Tolkien's The hobbit",
+      because of icontains with Q objects. 16 matched and the status counts
+      shrank to add up to 16.
+   2. With "the" searched, clicked Finished: predicted 3 books, correct. The
+      other status counts stayed the same because the counts ignore the
+      status filter. Clicking All books brought back the 16, as predicted.
+   3. Sort Title A-Z: predicted 16 books with Frankenstein first, correct,
+      since its full title is "Frankenstein; or, The Modern Prometheus". The
+      three books titled exactly "The Hobbit" were ordered by the pk
+      tiebreak.
+   4. Sort Rating high to low: predicted 5 stars first and unrated last,
+      correct, with A-Z title order within each rating.
+   5. Page 2 with rating sort: the sort stayed in the URL and the unrated
+      books were on page 2.
+   6. On page 2 clicked Reading: predicted page 1, correct, because the
+      filter form has no page field.
+
+   This page reads only from my own database, never Open Library. Write the
+   PROMPTS.md log including what I traced and checked, then commit and push
+   with the message "Trace collection search, filters, sorting, and
+   pagination".
+
+### Summary
+- **Outcome:**
+  - Prompt 1: a read-only walkthrough with file and line references. No code
+    was changed. It covered:
+    - the route: `config/urls.py:8` mounts `books.urls`, and
+      `books/urls.py:8` maps `/books/` to `views.collection`
+    - the controls in `_collection.html`: one GET form (lines 11–16) whose
+      HTMX `hx-trigger` (line 13) fires on radio and sort changes, on Enter,
+      and when an applied search is cleared. Search `q` (line 20), `status`
+      radios with counts (23–43), `min_rating` radios (45–64), the
+      `ordering` select (80–87), the `<noscript>` Apply button, and Reset
+      filters. The form has no `page` field.
+    - the view, `books/views.py:38-69`: `CollectionParams.from_query`, the
+      owner-scoped `request.user.saved_books.all()` (line 43), the
+      `Paginator` with `get_page`, `status_counts`, the elided page range,
+      and the fragment vs. full page choice with `Vary: HX-Request`
+    - `books/collection_query.py`: parameter cleaning with fallbacks (30–60);
+      `filter_books` (63–73) with `Q(title__icontains) | Q(authors__icontains)`
+      for an OR search, `rating__gte`, and status; `status_counts` (76–87)
+      with conditional `Count(filter=Q(...))` that skips the status filter;
+      the `ORDERINGS` table (90–105) with a case-insensitive title tiebreak,
+      `nulls_last`, and empty authors last; `PAGE_SIZE = 20`
+    - the results area (`_collection.html:72-112`) with its two empty states,
+      and `_pagination.html` using the `page_url` tag
+      (`books/templatetags/book_display.py:36-41`), which copies the current
+      query string and changes only `page`
+    - the answer that the page reads only the local SQLite `SavedBook` rows,
+      never Open Library
+  - Prompt 2: the user traced the code and ran six predict-and-check steps in
+    the browser. One prediction was wrong: they expected searching "the" to
+    return popular books from Open Library, but it searched only their saved
+    books and matched "the" anywhere in the title or author. The other five
+    predictions were correct: status counts ignoring the status filter, the
+    title sort with the pk tiebreak, the rating sort with unrated books last,
+    pagination keeping the sort, and a filter change returning to page 1.
+    These browser checks were the user's; I didn't run the app this session.
+- **Deviations:** No recommendations were offered and there were no follow-up
+  questions.
+- **Sideways:**
+  - The user's first prediction (search "the" would show popular books) was
+    wrong, which is the point of predict-and-check. It confirmed that the
+    collection search runs against their own database.
+  - My first template search also matched files inside `.venv`, which added
+    noise but didn't change anything.
+
 ## 2026-11-15 — API walkthrough and a console script for my own Django API
 
 ### Prompts
