@@ -1,0 +1,4 @@
+{# HTMX save response: the badge replaces the Save form (the request's target), and the  #}
+{# out-of-band head turns that card's cover and title into links to the saved book.     #}
+{% include "books/_owned_badge.html" %}
+{% include "books/_search_card_head.html" with book=saved owned=saved work_key=saved.ol_work_key oob=True %}

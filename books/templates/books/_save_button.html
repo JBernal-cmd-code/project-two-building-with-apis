@@ -1,0 +1,16 @@
+{# HTMX swaps just this form for the badge (or an inline error); without JS it posts and redirects back to `next`. #}
+<form method="post" action="{% url 'books:save' %}" hx-post="{% url 'books:save' %}" hx-target="this" hx-swap="outerHTML" data-save-form>
+  {% csrf_token %}
+  <input type="hidden" name="ol_work_key" value="{{ book.work_key }}">
+  <input type="hidden" name="title" value="{{ book.title }}">
+  <input type="hidden" name="authors" value="{{ book.authors }}">
+  <input type="hidden" name="first_publish_year" value="{{ book.first_publish_year|default_if_none:'' }}">
+  <input type="hidden" name="cover_id" value="{{ book.cover_id|default_if_none:'' }}">
+  <input type="hidden" name="total_pages" value="{{ book.total_pages|default_if_none:'' }}">
+  <input type="hidden" name="next" value="{{ next|default:request.get_full_path }}">
+  <button type="submit" class="btn btn-primary btn-xs">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+    Save
+  </button>
+  {% if save_error %}<p class="text-error text-xs mt-1" data-save-error>{{ save_error }}</p>{% endif %}
+</form>

@@ -9,6 +9,21 @@ RATING_CHOICES = [("", "Unrated")] + [
 ]
 
 
+class SavedBookCreateForm(forms.ModelForm):
+    """Book facts posted from a search result. The owner is set by the view."""
+
+    class Meta:
+        model = SavedBook
+        fields = (
+            "ol_work_key",
+            "title",
+            "authors",
+            "first_publish_year",
+            "cover_id",
+            "total_pages",
+        )
+
+
 class SavedBookEditForm(forms.ModelForm):
     """Only the reading-tracking fields; book facts are locked after creation."""
 

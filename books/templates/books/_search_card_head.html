@@ -1,0 +1,17 @@
+{# A result's cover and title. `book` has title and cover_url; `owned` is the user's SavedBook or None. #}
+{# The id lets a save response replace this block out of band (hx-swap-oob) without touching the rest of the page. #}
+<div id="result-head-{{ work_key }}"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if owned %}
+    {# Owned: cover and title open the saved book, like a My Collection card. #}
+    <a href="{{ owned.get_absolute_url }}" class="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md" data-owned-link>
+      {% include "books/_cover.html" with cover_class="rounded-md shadow ring-1 ring-black/5 transition group-hover:-translate-y-0.5 group-hover:shadow-lg" %}
+      <h3 class="mt-2.5 text-sm font-semibold leading-snug line-clamp-2 h-[2lh] group-hover:text-primary" title="{{ book.title }}">{{ book.title }}</h3>
+    </a>
+  {% else %}
+    {# Not saved: cover and title open the book on Open Library in a new tab. #}
+    <a href="{{ book.openlibrary_url }}" target="_blank" rel="noopener noreferrer" class="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md" data-openlibrary-link>
+      {% include "books/_cover.html" with cover_class="rounded-md shadow ring-1 ring-black/5 transition group-hover:-translate-y-0.5 group-hover:shadow-lg" %}
+      <h3 class="mt-2.5 text-sm font-semibold leading-snug line-clamp-2 h-[2lh] group-hover:text-primary" title="{{ book.title }}">{{ book.title }}<span class="sr-only"> (opens Open Library in a new tab)</span></h3>
+    </a>
+  {% endif %}
+</div>

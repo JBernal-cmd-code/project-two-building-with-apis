@@ -28,6 +28,142 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-15 — Phase 4: Open Library search and save from search
+
+### Prompts
+1. `/implement @prd/mychaptercollection.md @plans/mychaptercollection.md
+   implement Phase 4. Show me the TDD candidates to approve first, then go
+   through RED and GREEN without stopping unless something unexpected happens.`
+2. Approved all three
+3. Usability fix for the search page: for books already in my collection,
+   make the cover and title clickable to open my saved book's detail page, the
+   same way cards work on My Collection, not just the green badge. For books I
+   haven't saved, make the title link to that book's page on Open Library in a
+   new tab, so I can read more before saving.
+4. Yes, update the cover and title right away after saving, so a newly saved
+   card works the same as an owned one, while still keeping the page from
+   reloading and keeping my other search results.
+5. Found a bug during manual testing: after I save a book on the search page
+   and then press the browser Back button, coming back to the search page
+   shows the old version from before I saved, with a Save button on the book I
+   just saved. The save itself worked, and the book shows correctly if I
+   search again or open My Collection, so it looks like the browser is showing
+   a cached copy. Please fix it so going back to a search page always shows
+   the current saved state, for example by telling the browser not to cache
+   the search page. Add a test that the search response has the no-cache
+   header.
+
+   Also, for books I haven't saved, make the cover open the book's Open
+   Library page in a new tab too, not just the title, so it works the same way
+   as cards for books I own.
+6. Verified in the browser. Search, saving several books from one search, the
+   instant card switch after saving, the Back button now showing saved books
+   correctly, cover links for saved and unsaved books, duplicates showing the
+   badge, the no-match message, the offline error with the collection link,
+   and privacy with another user all work. Write the PROMPTS.md log, and after
+   it's saved, commit and push with the message "Phase 4: Open Library search
+   and save from search".
+
+### Summary
+- **Outcome:** Built Phase 4 of the plan:
+  - `books/openlibrary.py`, the app's Open Library client, modeled on the
+    script but separate from it (the script and its tests are unchanged). It
+    makes one request per search for 20 results with only the needed fields,
+    a 5-second timeout, and a `MyChapterCollection/1.0` User-Agent that adds
+    `CONTACT_EMAIL` when set. It returns cleaned `SearchResult`s (authors
+    joined, work key in short form, missing fields blank or None, docs without
+    a key or title skipped). Each failure type raises `OpenLibraryError` with a
+    friendly message: timeout, connection error, 403/429, 5xx, other HTTP
+    errors, unreadable or wrongly shaped JSON, and other request errors.
+  - a login-required, never-cached search page at `/books/search/` with:
+    - result cards (cover or placeholder, title, author, year)
+    - a comma-formatted total ("Found 1,234 matches") and a refine tip
+    - a no-match message
+    - on an error, a warning alert that keeps the query and links to My
+      Collection
+    - one owner-scoped lookup that marks owned results with an "In your
+      collection" badge
+  - cover and title links on every card: owned books open the saved book's
+    detail page, and unsaved books open the Open Library work page in a new
+    tab
+  - `/books/save/` (POST only), which validates the posted facts with a new
+    `SavedBookCreateForm`, sets the owner on the server, and starts the book
+    as Want to read with total pages prefilled. It never calls Open Library.
+    - With HTMX it returns the badge plus an out-of-band cover-and-title
+      block (`_search_card_head.html`), so only that card switches to links to
+      the saved book.
+    - A duplicate returns the same badge and creates no row.
+    - Invalid data re-renders that card's Save button with an inline error.
+    - Without JavaScript it redirects back to the same search with a flash
+      message.
+  - the unused `books/placeholder.html` removed, `django.contrib.humanize`
+    added, and the Tailwind CSS rebuilt
+
+  TDD covered three behaviors, each RED on an assertion and then GREEN:
+  - an Open Library failure shows the alert, keeps the query, and links to
+    the collection (RED `500 == 200`)
+  - owned results show the badge linking to the user's own saved book, and
+    another user's copy doesn't count (RED: the Hobbit card still had Save)
+  - an HTMX save creates one Want to read row with total pages and returns
+    the badge, and a repeat save adds no row (RED `0 == 1`)
+
+  Normal tests cover:
+  - the client's request parameters, User-Agent, result cleanup, no-match
+    results, and every error message
+  - the search page: login required, no Open Library call for an empty query,
+    rendering, total and tip, no matches, escaped titles, the save form's
+    hidden fields, every error type, the card links, and the no-cache headers
+  - save: login required, GET rejected, all facts copied, missing optional
+    facts, `/works/` prefix stripping and duplicates, another user's copy not
+    blocking a save, five kinds of invalid input, the no-JavaScript redirect
+    and messages, ignoring an off-site return URL, the out-of-band card
+    update, and a fixture that fails any save test that calls Open Library
+
+  The suite went from 114 to 174 passing tests, with the script tests
+  unchanged. Ruff check, Ruff format, and `manage.py check` are clean. The
+  user verified everything in the browser, including offline mode and
+  privacy with another user.
+- **Deviations:**
+  - The user approved all three TDD candidates as proposed.
+  - After the first browser check, the user asked for clickable covers and
+    titles: owned books open the saved book, and unsaved titles open Open
+    Library in a new tab.
+  - I pointed out that after a save only the button changed, so the card's
+    title still pointed to Open Library. The user asked for the cover and
+    title to switch right away, which I did with an HTMX out-of-band swap.
+  - The user found the Back button bug and asked for a no-cache fix with a
+    header test. They also asked for unsaved covers to open Open Library.
+  - My own judgment calls, mentioned in my reports:
+    - a `pageshow` handler that reloads the search page if the browser
+      restores it from the back-forward cache despite `no-store`
+    - an `IntegrityError` fallback for a double-click save
+    - ignoring off-site `next` URLs on the no-JavaScript redirect
+    - flash messages for no-JavaScript saves, duplicates, and failures
+    - skipping search results with no key or title, since they can't be saved
+    - a shared `fake_open_library` fixture in `tests/conftest.py` for the app
+      tests (the script tests keep their own helpers)
+    - `humanize` for the comma-formatted total, and removing the now-unused
+      placeholder template
+- **Sideways:**
+  - The first error-handling RED was an exception, because Django's test
+    client re-raises view errors. Setting `client.raise_request_exception =
+    False` in that test turned it into the 500 a user would see, which failed
+    on the status assertion.
+  - The first save RED was a `DoesNotExist` crash from `.get()`. Adding a
+    count assertion before it gave an assertion failure with the same
+    meaning, noted as a mechanical repair.
+  - One client test failed because the expected message contained
+    parentheses, which `pytest.raises(match=...)` reads as a regex. I escaped
+    them.
+  - Two no-JavaScript save tests followed the redirect to the search page,
+    which searched Open Library again and tripped the no-Open-Library
+    fixture. They now check the redirect and read the flash message without
+    following it.
+  - My first version of the search page didn't stop browsers from caching
+    it, so Back after a save showed the page from before the save. The user
+    caught it in the browser, and `never_cache` plus the `pageshow` reload
+    fixed it.
+
 ## 2026-11-15 — Phase 3: Book detail, edit, and remove
 
 ### Prompts

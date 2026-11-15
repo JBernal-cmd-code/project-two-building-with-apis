@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Find books · MyChapterCollection{% endblock %}
+
+{% block content %}
+<section>
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold tracking-tight">Find books</h1>
+    <p class="text-sm text-base-content/60">Search Open Library by title or author, then save books to your collection.</p>
+  </div>
+
+  <form method="get" action="{% url 'books:search' %}" class="flex gap-2 max-w-2xl mb-6" role="search">
+    <label class="input w-full">
+      <svg class="h-4 w-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/></svg>
+      <input type="search" name="q" value="{{ query }}" placeholder="Title or author, e.g. The Hobbit" aria-label="Search Open Library" autofocus>
+    </label>
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+
+  {% if error %}
+    <div role="alert" class="alert alert-warning alert-soft mb-6 max-w-2xl items-start" data-search-error>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008M10.34 3.94 1.82 18a1.875 1.875 0 0 0 1.66 2.75h17.04A1.875 1.875 0 0 0 22.18 18L13.66 3.94a1.875 1.875 0 0 0-3.32 0Z"/></svg>
+      <div>
+        <p class="font-medium">{{ error }}</p>
+        <p class="text-sm">Your saved books are still available in <a href="{% url 'books:collection' %}" class="link font-medium">My Collection</a>.</p>
+      </div>
+    </div>
+  {% elif found %}
+    {% if items %}
+      <div class="mb-4 text-sm text-base-content/70" data-search-summary>
+        <p>Found {{ found.total|intcomma }} match{{ found.total|pluralize:"es" }} for &ldquo;{{ query }}&rdquo;, showing the top {{ items|length }}.</p>
+        <p class="text-base-content/50">Not seeing your book? Try adding the author's name or more of the title.</p>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-6">
+        {% for book, owned in items %}
+          {% include "books/_search_card.html" %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="flex flex-col items-center text-center py-16 gap-2" data-no-matches>
+        <div class="text-4xl" aria-hidden="true">🔍</div>
+        <div class="font-semibold">No books matched &ldquo;{{ query }}&rdquo;</div>
+        <div class="text-sm text-base-content/60">Check the spelling, or try fewer or different words.</div>
+      </div>
+    {% endif %}
+  {% endif %}
+</section>
+{# The page is sent no-store; if a browser still restores it from the back-forward cache, reload for the current saved state. #}
+<script>addEventListener("pageshow", (e) => { if (e.persisted) location.reload(); });</script>
+{% endblock %}

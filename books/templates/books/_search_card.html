@@ -1,0 +1,15 @@
+{# One Open Library result. `book` is a SearchResult; `owned` is the user's SavedBook or None. #}
+<article class="group flex flex-col" data-search-result>
+  {% include "books/_search_card_head.html" with work_key=book.work_key %}
+  <div class="mt-1 space-y-1 flex-1">
+    <p class="text-xs text-base-content/60 truncate">{{ book.authors_display }}</p>
+    <p class="text-xs text-base-content/50">{% if book.first_publish_year %}First published {{ book.first_publish_year }}{% else %}&nbsp;{% endif %}</p>
+  </div>
+  <div class="mt-2">
+    {% if owned %}
+      {% include "books/_owned_badge.html" with saved=owned %}
+    {% else %}
+      {% include "books/_save_button.html" %}
+    {% endif %}
+  </div>
+</article>
