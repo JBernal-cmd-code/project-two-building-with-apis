@@ -1,0 +1,30 @@
+[project]
+name = "project-two-building-with-apis"
+version = "0.1.0"
+description = "Book tracker built on the Open Library API (CIDM 3312 Project 2)."
+requires-python = ">=3.14"
+dependencies = [
+    "python-dotenv>=1.2.4",
+    "requests>=2.34.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[tool.ruff]
+line-length = 88
+# Treat modules in scripts/ as our own code when sorting imports.
+src = [".", "scripts"]
+
+[tool.ruff.lint]
+# Ruff defaults (E4, E7, E9, F) plus import sorting, likely bugs,
+# modern syntax upgrades, and naming conventions.
+extend-select = ["I", "B", "UP", "N"]
+
+[tool.pytest.ini_options]
+# Lets tests `import search_books` while scripts/ stays a plain folder.
+pythonpath = ["scripts"]
+testpaths = ["tests"]
