@@ -55,6 +55,39 @@ books the demo user already has.
 command and written in its source, so never use it, or the demo account, on a
 deployed site.
 
+### REST API
+
+The app has its own API for saved books. It never calls Open Library. Every
+request must be authenticated (unauthenticated requests get `401`), and each
+user sees only their own books (another user's book is a `404`).
+
+| Method | URL | Purpose |
+|---|---|---|
+| `POST` | `/api/token/` | Get your token from `username` and `password` |
+| `GET` | `/api/books/` | List your books (20 per page, with `count`, `next`, `previous`) |
+| `POST` | `/api/books/` | Save a book: `ol_work_key` and `title`, plus optional `authors`, `first_publish_year`, `cover_id`, `total_pages` |
+| `GET` | `/api/books/<id>/` | One book |
+| `PUT` / `PATCH` | `/api/books/<id>/` | Update `status`, `current_page`, `total_pages`, `rating`, `notes` |
+| `DELETE` | `/api/books/<id>/` | Remove a book |
+
+The list takes the same parameters as My Collection: `q` (title or author),
+`status` (`want_to_read`, `reading`, `finished`, `abandoned`), `min_rating`
+(1–5), `ordering` (`-created_at`, `-updated_at`, `title`, `authors`,
+`-rating`, `-first_publish_year`), and `page`. Book facts (work key, title,
+authors, year, cover ID) are locked after creation, and changes to them in an
+update are ignored.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/token/ -d "username=demo" -d "password=<demo password>"
+curl -H "Authorization: Token <token>" "http://127.0.0.1:8000/api/books/?status=reading&ordering=title"
+```
+
+On Windows PowerShell, type `curl.exe` instead of `curl`. In PowerShell,
+`curl` is an alias for `Invoke-WebRequest`, which doesn't accept these options.
+
+While logged in on the website, you can also open `/api/books/` in the browser
+to use DRF's browsable API.
+
 ## Scripts
 
 ### `scripts/search_books.py`: search Open Library from the console

@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "django_tailwind_cli",
+    "rest_framework",
+    "rest_framework.authtoken",
     "accounts",
     "books",
 ]
@@ -107,6 +109,17 @@ TAILWIND_CLI_USE_DAISY_UI = True
 TAILWIND_CLI_VERSION = "2.10.35"
 TAILWIND_CLI_SRC_CSS = "styles/source.css"
 TAILWIND_CLI_DIST_CSS = "css/tailwind.css"
+
+# The app's own REST API. Token auth comes first so unauthenticated requests
+# get 401 with a WWW-Authenticate header (session auth alone would send 403).
+# Session auth keeps the browsable API working for logged-in browsers.
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+}
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

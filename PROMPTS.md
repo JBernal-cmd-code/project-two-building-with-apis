@@ -28,6 +28,101 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-15 — Phase 6: REST API
+
+### Prompts
+1. `/implement @prd/mychaptercollection.md @plans/mychaptercollection.md
+   implement Phase 6. Show me the TDD candidates to approve first, then go
+   through RED and GREEN without stopping unless something unexpected happens.`
+2. Approved, all three.
+3. Verified in the browser and terminal. Logged out returns 401, the
+   browsable API lists my books with count and next, filters and page=99
+   work, a duplicate create returns 400, a new create returns 201 with the
+   work key stored without /works/, PATCH ignores the title and Finished fills
+   in current page, rating 6 returns 400, delete returns 204, getting a token
+   and listing with it works, a fake token is rejected, and another user gets
+   404 on demo's book and only sees their own books. One small README fix: add
+   a note under the curl examples that on Windows PowerShell you have to type
+   curl.exe instead of curl. Then write the PROMPTS.md log, and after it's
+   saved, commit and push with the message "Phase 6: REST API".
+
+### Summary
+- **Outcome:** Built Phase 6 of the plan:
+  - `djangorestframework` (3.18.3) added with `rest_framework.authtoken` and
+    its migrations. `REST_FRAMEWORK` settings list token auth before session
+    auth, so unauthenticated requests get 401 with `WWW-Authenticate: Token`
+    instead of 403. `IsAuthenticated` is the default permission.
+  - `books/api_urls.py` mounted at `/api/` (namespace `api:`):
+    `/api/token/` (DRF's `obtain_auth_token`) and a `DefaultRouter` for
+    `/api/books/`
+  - `books/api.py`, a `SavedBookViewSet` whose queryset always starts from
+    `request.user.saved_books`, so another user's book is a 404 for every
+    method. The list reuses Phase 5's `CollectionParams` and
+    `collection_books`, so the website's `q`, `status`, `min_rating`, and
+    `ordering` values and fallbacks apply. A `CollectionPagination` pages at
+    20 with Django's `get_page`, so out-of-range pages show the last page and
+    invalid ones page 1, like the website.
+  - `books/serializers.py`, a `SavedBookSerializer` that:
+    - sets the owner on the server and never exposes or accepts it
+    - stores the work key in short form through the model's validator
+    - makes the book facts read-only once an instance exists, so update
+      changes to them are ignored
+    - runs the model's `clean()` on a copy of the book, so the page rule and
+      Finished auto-fill match the website
+    - checks the current user's books for duplicates and returns 400 "This
+      book is already in your collection." An `IntegrityError` from a
+      simultaneous create maps to the same 400.
+  - a README "REST API" section with the endpoints, parameters, curl
+    examples, and (as the user asked) a note to type `curl.exe` in Windows
+    PowerShell
+
+  TDD covered three behaviors, each RED on an assertion and then GREEN:
+  - GET, PUT, PATCH, and DELETE on another user's book return 404 and change
+    nothing (RED `[200, 200, 200] == [404, 404, 404]` against an unscoped
+    stub queryset)
+  - a duplicate create returns 400 with the message, while another user's
+    copy doesn't block the save (RED `500 == 400`)
+  - updates ignore locked fields while the page rule and Finished auto-fill
+    apply (RED `'OL1W' != 'OL27482W'`)
+
+  Normal tests cover:
+  - token issue, a wrong password, the same token each time, a bad token,
+    401 on every method, and session auth with the browsable API
+  - list privacy, 20 per page with count/next/previous, next links keeping
+    filters, out-of-range and invalid pages, each filter, orderings, one
+    combined test, and unknown-value fallbacks
+  - create: owner from the request (input owner ignored), prefix stripping,
+    defaults, optional facts, six invalid work keys, a missing key, a
+    missing or blank title, model rules, and Finished auto-fill
+  - retrieve, full and partial update, rejected updates leaving the row
+    unchanged, lowering total pages below the current page, and delete
+  - an autouse fixture that fails any API test that calls Open Library
+
+  The suite went from 210 to 255 passing tests, with the script tests
+  unchanged. Ruff check, Ruff format, `makemigrations --check`, and
+  `manage.py check` are clean. The user verified everything in the browser
+  and terminal, including token auth and privacy with another user.
+- **Deviations:**
+  - The user approved all three TDD candidates as proposed.
+  - After the manual check, the user asked for the README `curl.exe` note.
+  - My own judgment calls, mentioned in my reports:
+    - token auth listed first so unauthenticated requests get 401
+    - the API's pagination uses the website's safe page lookup instead of
+      DRF's default 404 for bad pages
+    - the owner field is left out of the API's responses
+    - a rejected update is checked on a copy, so the instance isn't changed
+- **Sideways:**
+  - The duplicate-create RED first crashed with an `IntegrityError`, because
+    the test client re-raises view errors. Setting
+    `api.raise_request_exception = False`, as in Phase 4, turned it into the
+    500 a client would see. Noted as a mechanical repair.
+  - In the locked-fields test I first sent `current_page: 301` after marking
+    the book Finished, and got 200, not 400. The Finished auto-fill (approved
+    in Phase 2) corrects the page instead of rejecting it. I moved that
+    request before the Finished one; the assertions kept the same meaning,
+    noted as a mechanical repair.
+  - `ruff format` rewrapped one test in the new file.
+
 ## 2026-11-15 — Phase 5: Collection search, filters, sort, pagination, and HTMX updates
 
 ### Prompts
