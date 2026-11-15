@@ -28,6 +28,119 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-15 — Phase 5: Collection search, filters, sort, pagination, and HTMX updates
+
+### Prompts
+1. `/implement @prd/mychaptercollection.md @plans/mychaptercollection.md
+   implement Phase 5. Show me the TDD candidates to approve first, then go
+   through RED and GREEN without stopping unless something unexpected happens.`
+2. Approved, all three. Make sure the normal tests also cover that changing a
+   filter or search goes back to page 1.
+3. Verified in the browser. Layout, status filter, counts updating with
+   search and rating, sorting with unrated last, pagination keeping my sort,
+   back button, bad URLs, empty state, and offline all work. One usability
+   fix: when I clear the search box by clicking the X or deleting all the
+   text, I have to press Enter again to see my full collection. Make clearing
+   the search box update the collection right away. Typing a new search should
+   still wait for Enter.
+4. The clear-search fix works. Write the PROMPTS.md log, and after it's saved,
+   commit and push with the message "Phase 5: Collection search, filters,
+   sort, pagination, and HTMX updates".
+
+### Summary
+- **Outcome:** Built Phase 5 of the plan:
+  - `books/collection_query.py`, shared logic the Phase 6 API can reuse:
+    - `CollectionParams.from_query()` cleans `q`, `status`, `min_rating`, and
+      `ordering`, and unknown values fall back to the defaults
+    - `filter_books()` applies search (title or authors, case-insensitive),
+      minimum rating, and status
+    - `status_counts()` counts all books and each status in one aggregate
+      query, with every filter applied except status
+    - an `ORDERINGS` table for the six sorts: empty ratings, years, and
+      authors sort last, and ties break by title, ignoring case
+  - the My Collection view pages at 20 with Django's `get_page`, sends
+    `Vary: HX-Request`, and returns only the `_collection.html` fragment for
+    HTMX swaps. HTMX history restores still get the full page.
+  - the Variant D layout as one GET form (`_collection.html`), with:
+    - a sidebar with the search box, status radios with counts and colored
+      dots, minimum rating radios, and Reset filters
+    - the sort dropdown at the top right and a result count
+    - a "No books match these filters" empty state with Clear filters,
+      separate from the "Your collection is empty" state
+    - a `<noscript>` Apply button so the form works without JavaScript
+  - `_pagination.html` with "Showing X–Y of N", Prev, Next, and numbered
+    pages with ellipses. A `page_url` template tag copies the current query
+    string and changes only `page`. The form has no page field, so any filter
+    change starts at page 1.
+  - HTMX attributes on the form: status, rating, and sort changes, Enter in
+    the search box, pagination links, and the reset and clear links swap the
+    whole collection area and push the URL
+  - clearing an applied search (the X button or deleting the text) updates
+    the collection right away, and the search box keeps focus after the swap
+  - the Tailwind CSS rebuilt
+
+  TDD covered three behaviors, each RED on an assertion and then GREEN:
+  - status counts apply the search and rating filters but not the status
+    filter (RED `{} == {'all': 3, …}`)
+  - rating and year sorts put empty values last and break ties by title
+    (RED: books came back newest first)
+  - pagination links keep `q`, `status`, `min_rating`, and `ordering` and
+    change only `page` (RED: no `rel="prev"` link)
+
+  Normal tests cover:
+  - each filter on its own, the other four orderings, and one combined test
+  - 20 per page, and a filter change returning to page 1 (as the user asked)
+  - out-of-range and invalid pages, and fallbacks for unknown values
+  - the empty state, reset filters, and a single page having no page links
+  - the full page vs. the HTMX fragment vs. a history restore, the
+    `Vary` header, and the form's no-JS and HTMX attributes, including the
+    clear-search trigger
+
+  The suite went from 174 to 210 passing tests, with the script tests
+  unchanged. Ruff check, Ruff format, and `manage.py check` are clean. The
+  user verified everything in the browser, including offline mode.
+- **Deviations:**
+  - The user approved all three TDD candidates and asked for a normal test
+    that changing a filter or search returns to page 1. Added: the form has
+    no `page` field, and a filter request lands on page 1 with no Prev link.
+  - After the browser check, the user asked for clearing the search box to
+    update the collection right away, while typing still waits for Enter.
+    Done with an extra `input` trigger that fires only when the box is empty
+    and the input's `defaultValue` (the applied search) was not, plus an `id`
+    on the input so HTMX keeps focus. The test checks only the attributes, so
+    the user confirmed the behavior in the browser.
+  - My own judgment calls, mentioned in my reports:
+    - status and rating filters are radio buttons styled as DaisyUI menu
+      items, so the form works without JavaScript
+    - typing in the search box doesn't trigger a request on blur; only Enter
+      does
+    - `Vary: HX-Request` so a browser cache never serves the fragment as the
+      full page
+    - HTMX history restores get the full page
+    - two empty states: one for an empty collection, one for no matches
+    - the title sort uses the primary key as a tiebreak, and the author sort
+      puts unknown authors last, as in the prototype
+- **Sideways:**
+  - Two Phase 2 collection tests failed once the new layout was in, because
+    the design changed, not because of a bug:
+    - the sidebar's rating filter now shows stars on every page, so the star
+      test now looks only at the results section
+    - the grid now pages at 20, so the 25-book seed test counts cards across
+      both pages
+    Both were mechanical repairs.
+  - My first invalid-page test expected `page=-1` to show page 1, but
+    Django's `get_page` treats any whole number outside the range (`0`,
+    `-1`, `99`) as out of range and shows the last page. Following the PRD's
+    "Django's safe page lookup", I moved `0` and `-1` to the out-of-range
+    test and reported it.
+  - A bash heredoc for appending the normal tests failed on quoting, so I
+    appended them with the Edit tool instead.
+  - `ruff format` rewrote `except (TypeError, ValueError)` into Python 3.14's
+    unparenthesized form, which is valid for this project.
+  - I read HTMX 2.0.4's trigger filter code to confirm that `target` in
+    `change[target.type !== 'search']` resolves against the event before
+    relying on it.
+
 ## 2026-11-15 — Phase 4: Open Library search and save from search
 
 ### Prompts

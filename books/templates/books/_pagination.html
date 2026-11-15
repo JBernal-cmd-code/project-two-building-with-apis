@@ -1,0 +1,31 @@
+{% load book_display %}
+{# Links keep the current search, filters, and sort; only the page changes. #}
+<nav class="flex flex-wrap items-center justify-between gap-3 mt-8" aria-label="Pagination" data-pagination>
+  <span class="text-sm text-base-content/60">Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+  {% if page.has_other_pages %}
+    <div class="join">
+      {% if page.has_previous %}
+        {% page_url page.previous_page_number as url %}
+        <a href="{{ url }}" hx-get="{{ url }}" rel="prev" class="join-item btn btn-sm">‹ Prev</a>
+      {% else %}
+        <span class="join-item btn btn-sm btn-disabled" aria-disabled="true">‹ Prev</span>
+      {% endif %}
+      {% for number in page_range %}
+        {% if number == page.number %}
+          <span class="join-item btn btn-sm btn-primary" aria-current="page">{{ number }}</span>
+        {% elif number == page.paginator.ELLIPSIS %}
+          <span class="join-item btn btn-sm btn-disabled" aria-hidden="true">{{ number }}</span>
+        {% else %}
+          {% page_url number as url %}
+          <a href="{{ url }}" hx-get="{{ url }}" class="join-item btn btn-sm" aria-label="Page {{ number }}">{{ number }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if page.has_next %}
+        {% page_url page.next_page_number as url %}
+        <a href="{{ url }}" hx-get="{{ url }}" rel="next" class="join-item btn btn-sm">Next ›</a>
+      {% else %}
+        <span class="join-item btn btn-sm btn-disabled" aria-disabled="true">Next ›</span>
+      {% endif %}
+    </div>
+  {% endif %}
+</nav>

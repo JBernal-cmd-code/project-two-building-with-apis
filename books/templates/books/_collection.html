@@ -1,0 +1,113 @@
+{% load book_display %}
+{% comment %}
+  The whole collection area is one GET form. Without JavaScript it submits
+  normally. With HTMX, a status, rating, or sort change, Enter in the search
+  box, emptying an applied search (the X button or deleting the text), or a
+  pagination link fetches only this fragment, swaps it in, and pushes the new
+  URL. The search box's defaultValue is the applied search, so clearing an
+  unsubmitted draft does nothing, and its id lets HTMX keep focus after a swap. The form has no page field, so any filter or search
+  change starts again at page 1.
+{% endcomment %}
+<form id="collection" method="get" action="{% url 'books:collection' %}"
+      hx-get="{% url 'books:collection' %}"
+      hx-trigger="change[target.type !== 'search'], submit, input[target.type === 'search' &amp;&amp; target.value === '' &amp;&amp; target.defaultValue !== '']"
+      hx-target="#collection" hx-swap="outerHTML" hx-push-url="true"
+      class="grid lg:grid-cols-[220px_minmax(0,1fr)] gap-8 transition-opacity [&.htmx-request]:opacity-60"
+      data-collection>
+  <aside class="lg:sticky lg:top-[84px] self-start space-y-6">
+    <label class="input w-full">
+      <svg class="h-4 w-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/></svg>
+      <input type="search" id="collection-search" name="q" value="{{ params.q }}" placeholder="Search title or author" aria-label="Search your collection">
+    </label>
+
+    <fieldset>
+      <legend class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2 px-1">Status</legend>
+      <ul class="menu menu-sm w-full p-0 gap-0.5">
+        <li>
+          <label class="justify-between has-focus-visible:outline-2 has-focus-visible:outline-primary{% if not params.status %} menu-active{% endif %}">
+            <input type="radio" name="status" value="" class="sr-only"{% if not params.status %} checked{% endif %}>
+            <span>All books</span>
+            <span class="badge badge-sm badge-ghost" data-status-count="all">{{ all_count }}</span>
+          </label>
+        </li>
+        {% for value, label, count in statuses %}
+          <li>
+            <label class="justify-between has-focus-visible:outline-2 has-focus-visible:outline-primary{% if params.status == value %} menu-active{% endif %}">
+              <input type="radio" name="status" value="{{ value }}" class="sr-only"{% if params.status == value %} checked{% endif %}>
+              <span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full {{ value|status_dot }}" aria-hidden="true"></span>{{ label }}</span>
+              <span class="badge badge-sm badge-ghost" data-status-count="{{ value }}">{{ count }}</span>
+            </label>
+          </li>
+        {% endfor %}
+      </ul>
+    </fieldset>
+
+    <fieldset>
+      <legend class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2 px-1">Minimum rating</legend>
+      <ul class="menu menu-sm w-full p-0 gap-0.5">
+        <li>
+          <label class="has-focus-visible:outline-2 has-focus-visible:outline-primary{% if not params.min_rating %} menu-active{% endif %}">
+            <input type="radio" name="min_rating" value="" class="sr-only"{% if not params.min_rating %} checked{% endif %}>
+            <span>Any rating</span>
+          </label>
+        </li>
+        {% for n in min_ratings %}
+          <li>
+            <label class="has-focus-visible:outline-2 has-focus-visible:outline-primary{% if params.min_rating == n %} menu-active{% endif %}">
+              <input type="radio" name="min_rating" value="{{ n }}" class="sr-only"{% if params.min_rating == n %} checked{% endif %}>
+              {% stars n "text-sm" %}
+              <span class="text-xs text-base-content/50">{% if n == 5 %}only{% else %}&amp; up{% endif %}</span>
+            </label>
+          </li>
+        {% endfor %}
+      </ul>
+    </fieldset>
+
+    <div class="flex items-center gap-3 px-1">
+      <noscript><button type="submit" class="btn btn-sm btn-primary">Apply</button></noscript>
+      <a href="{% url 'books:collection' %}" hx-get="{% url 'books:collection' %}" class="link link-hover text-sm text-base-content/60" data-reset-filters>Reset filters</a>
+    </div>
+  </aside>
+
+  <section class="min-w-0" data-collection-results>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">My Collection</h1>
+        <p class="text-sm text-base-content/60" data-result-count>
+          {{ page.paginator.count }} book{{ page.paginator.count|pluralize }}{% if params.is_filtered %} match{{ page.paginator.count|pluralize:"es," }} your filters{% endif %}
+        </p>
+      </div>
+      <label class="flex items-center gap-2">
+        <span class="text-sm text-base-content/60">Sort by</span>
+        <select name="ordering" class="select select-sm w-52" aria-label="Sort">
+          {% for value, label in orderings %}
+            <option value="{{ value }}"{% if params.ordering == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    {% if books %}
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-6">
+        {% for book in books %}
+          {% include "books/_book_card.html" %}
+        {% endfor %}
+      </div>
+      {% include "books/_pagination.html" %}
+    {% elif has_any_books %}
+      <div class="flex flex-col items-center text-center py-16 gap-3" data-no-matches>
+        <div class="text-4xl" aria-hidden="true">🔍</div>
+        <div class="font-semibold">No books match these filters</div>
+        <div class="text-sm text-base-content/60">Try a different search, or clear the filters.</div>
+        <a href="{% url 'books:collection' %}" hx-get="{% url 'books:collection' %}" class="btn btn-sm btn-outline" data-clear-filters>Clear filters</a>
+      </div>
+    {% else %}
+      <div class="flex flex-col items-center text-center py-16 gap-3" data-empty-collection>
+        <div class="text-4xl" aria-hidden="true">📚</div>
+        <div class="font-semibold">Your collection is empty</div>
+        <div class="text-sm text-base-content/60">Search Open Library to find books and save them here.</div>
+        <a href="{% url 'books:search' %}" class="btn btn-sm btn-outline">Find books</a>
+      </div>
+    {% endif %}
+  </section>
+</form>

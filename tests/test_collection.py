@@ -91,12 +91,17 @@ def test_missing_authors_show_unknown_author(client, reader):
     assert "Unknown author" in get_collection(client, reader)
 
 
+def results_part(html):
+    """The results section, without the sidebar (whose rating filter has stars)."""
+    return html.split("data-collection-results", 1)[1]
+
+
 def test_rated_book_shows_stars_and_unrated_book_shows_none(client, reader, other):
     save_book(reader, rating=4)
     save_book(other, rating=None)
 
-    rated_html = get_collection(client, reader)
-    unrated_html = get_collection(client, other)
+    rated_html = results_part(get_collection(client, reader))
+    unrated_html = results_part(get_collection(client, other))
 
     assert 'aria-label="4 of 5 stars"' in rated_html
     assert "★" not in unrated_html
@@ -179,6 +184,8 @@ def test_seeded_collection_renders_without_open_library(client):
     call_command("seed_demo", stdout=StringIO())
     demo = get_user_model().objects.get(username="demo")
 
-    html = get_collection(client, demo)
+    first_page = get_collection(client, demo)
+    second_page = client.get(reverse("books:collection"), {"page": 2}).content.decode()
 
-    assert html.count("data-book-card") == demo.saved_books.count()
+    cards = first_page.count("data-book-card") + second_page.count("data-book-card")
+    assert cards == demo.saved_books.count()

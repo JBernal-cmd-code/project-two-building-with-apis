@@ -1,26 +1,72 @@
 """Website views for saved books.
 
-My Collection, book detail, edit, and remove use only local data and never
-call Open Library. The search page is still a placeholder until Phase 4.
+My Collection, book detail, edit, save, and remove use only local data and
+never call Open Library. Only the search page calls it.
 """
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.cache import patch_vary_headers
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from . import openlibrary
+from .collection_query import (
+    MIN_RATING_CHOICES,
+    ORDERING_LABELS,
+    PAGE_SIZE,
+    CollectionParams,
+    collection_books,
+    status_counts,
+)
 from .forms import SavedBookCreateForm, SavedBookEditForm
+from .models import SavedBook
+
+
+def _is_htmx_swap(request):
+    """An HTMX request that wants a fragment, not a history restore of the page."""
+    return (
+        request.headers.get("HX-Request") == "true"
+        and request.headers.get("HX-History-Restore-Request") != "true"
+    )
 
 
 @login_required
 def collection(request):
+    """My Collection: local data only, never Open Library."""
+    params = CollectionParams.from_query(request.GET)
     # Privacy: every query starts from the current user's books.
-    books = request.user.saved_books.all()
-    return render(request, "books/collection.html", {"books": books})
+    own_books = request.user.saved_books.all()
+    page = Paginator(collection_books(own_books, params), PAGE_SIZE).get_page(
+        request.GET.get("page")
+    )
+    counts = status_counts(own_books, params)
+    context = {
+        "params": params,
+        "page": page,
+        "page_range": page.paginator.get_elided_page_range(
+            page.number, on_each_side=1, on_ends=1
+        ),
+        "books": page.object_list,
+        "has_any_books": own_books.exists(),
+        "all_count": counts["all"],
+        "statuses": [
+            (value, label, counts[value]) for value, label in SavedBook.Status.choices
+        ],
+        "orderings": ORDERING_LABELS.items(),
+        "min_ratings": MIN_RATING_CHOICES,
+    }
+    template = (
+        "books/_collection.html" if _is_htmx_swap(request) else "books/collection.html"
+    )
+    response = render(request, template, context)
+    # The same URL returns a fragment or a page, so caches must tell them apart.
+    patch_vary_headers(response, ["HX-Request"])
+    return response
 
 
 def get_own_book(request, pk):

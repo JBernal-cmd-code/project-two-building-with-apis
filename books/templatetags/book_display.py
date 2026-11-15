@@ -27,6 +27,20 @@ def status_badge(book, size="badge-xs"):
     }
 
 
+@register.filter
+def status_dot(status):
+    """The colored dot class for a status value, as used in the sidebar."""
+    return STATUS_STYLES[status]["dot"]
+
+
+@register.simple_tag(takes_context=True)
+def page_url(context, number):
+    """The current query string with only ``page`` changed."""
+    query = context["request"].GET.copy()
+    query["page"] = number
+    return "?" + query.urlencode()
+
+
 @register.inclusion_tag("books/_stars.html")
 def stars(rating, size="text-xs"):
     """Filled and empty stars; renders nothing for an unrated book."""
