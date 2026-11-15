@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# django-tailwind-cli downloaded binary (rebuilt by 'manage.py tailwind build')
+.django_tailwind_cli/
+
+# collectstatic output
+staticfiles/

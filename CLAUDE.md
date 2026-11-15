@@ -11,6 +11,14 @@ A private, per-user reading tracker built with Django that finds books through t
 - HTMX, served as a pinned local static file (no CDN)
 - pytest + pytest-django
 
+## Commands
+
+- `uv run python manage.py migrate`: apply database migrations
+- `uv run python manage.py runserver`: start the dev server at http://127.0.0.1:8000/
+- `uv run python manage.py tailwind build`: build `static/css/tailwind.css` from `styles/source.css` (rebuild and commit after template class changes)
+- `uv run pytest`: run the full offline test suite, including the script tests
+- `uv run ruff check .` and `uv run ruff format .`: lint and format
+
 ## Architecture decisions (from the PRD)
 
 - Book facts are copied into one local `SavedBook` row per user per book; there is no shared catalog table.

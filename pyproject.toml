@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Book tracker built on the Open Library API (CIDM 3312 Project 2)."
 requires-python = ">=3.14"
 dependencies = [
+    "django>=6.1.3",
+    "django-tailwind-cli>=4.8.2",
     "python-dotenv>=1.2.4",
     "requests>=2.34.2",
 ]
@@ -11,6 +13,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.2.0",
+    "pytest-django>=4.14.0",
     "ruff>=0.17.5",
 ]
 
@@ -25,6 +28,8 @@ src = [".", "scripts"]
 extend-select = ["I", "B", "UP", "N"]
 
 [tool.pytest.ini_options]
-# Lets tests `import search_books` while scripts/ stays a plain folder.
-pythonpath = ["scripts"]
+# "." lets tests import the Django project; "scripts" lets tests
+# `import search_books` while scripts/ stays a plain folder.
+pythonpath = [".", "scripts"]
 testpaths = ["tests"]
+DJANGO_SETTINGS_MODULE = "config.settings"

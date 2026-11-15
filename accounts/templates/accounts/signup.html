@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Sign up · MyChapterCollection{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 border border-base-300 max-w-md mx-auto">
+  <div class="card-body">
+    <h1 class="card-title text-2xl">Create your collection</h1>
+    <form method="post" action="{% url 'accounts:signup' %}">
+      {% csrf_token %}
+      {% if form %}{% include "accounts/_form_fields.html" %}{% endif %}
+      <button type="submit" class="btn btn-primary w-full mt-4">Sign up</button>
+    </form>
+    <p class="text-sm mt-2">
+      Already have an account? <a href="{% url 'accounts:login' %}" class="link link-primary">Log in</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

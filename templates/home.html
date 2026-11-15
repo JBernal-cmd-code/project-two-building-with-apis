@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero bg-base-100 border border-base-300 rounded-box py-12">
+  <div class="hero-content text-center">
+    <div class="max-w-xl">
+      <h1 class="text-4xl font-bold tracking-tight">Your private reading record</h1>
+      <p class="py-6 text-base-content/80">
+        MyChapterCollection keeps every book you want to read, are reading, or have
+        finished in one place. Find books in the Open Library catalog, save them with
+        one click, and track your status, current page, star rating, and private notes.
+      </p>
+      <p class="pb-6 text-sm text-base-content/70">
+        Your collection is private to you, and it stays available even when Open Library is down.
+      </p>
+      {% if user.is_authenticated %}
+        <a href="{% url 'books:collection' %}" class="btn btn-primary">Go to My Collection</a>
+        <a href="{% url 'books:search' %}" class="btn btn-ghost">Find books</a>
+      {% else %}
+        <a href="{% url 'accounts:signup' %}" class="btn btn-primary">Create your collection</a>
+        <a href="{% url 'accounts:login' %}" class="btn btn-ghost">Log in</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

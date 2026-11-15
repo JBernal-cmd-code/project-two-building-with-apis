@@ -28,6 +28,80 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Phase 1: project skeleton, accounts, and app shell
+
+### Prompts
+1. `/implement @prd/mychaptercollection.md @plans/mychaptercollection.md
+   implement Phase 1. Show me the TDD candidates to approve first, then go
+   through RED and GREEN without stopping unless something unexpected happens.`
+2. Approved, all three. Also add normal tests that the home page loads for
+   logged-out visitors, that login and logout work, and that flash messages
+   show in the base layout.
+3. Verified in the browser. Sign-up with the welcome message, logout, the
+   return-to after login, and the wrong password error all work. One change: I
+   want a "Welcome back, <username>!" flash message every time someone logs
+   in, so login gives the same kind of confirmation as sign-up and logout. Add
+   a test for it too.
+4. The welcome back message works. Now add the real commands to CLAUDE.md
+   since they exist: migrate, runserver, the tailwind build command, pytest,
+   and ruff. Then write the PROMPTS.md log. After the log is saved, commit and
+   push with the message "Phase 1: Project skeleton, accounts, and app shell".
+
+### Summary
+- **Outcome:** Built Phase 1 of the plan:
+  - Django 6.1 project (`config` settings, `books` and `accounts` apps) under
+    uv with SQLite
+  - Tailwind + DaisyUI through `django-tailwind-cli`. The DaisyUI setting was
+    confirmed in the package source as `TAILWIND_CLI_USE_DAISY_UI = True`,
+    which downloads the standalone `tailwindcss-extra` binary (pinned to
+    2.10.35). No Node.
+  - a custom `chapter` DaisyUI theme with the prototype's warm base colors
+  - HTMX 2.0.4 as a local static file
+  - base layout with the navbar, a user menu with POST logout, and flash
+    messages
+  - public home page
+  - sign-up with auto-login, login, and logout
+  - login-required placeholder pages for My Collection and Find books
+  - an autouse fixture that blocks all sockets in tests
+
+  TDD covered three behaviors, each RED on an assertion then GREEN: sign-up
+  creates and logs in the user; a protected page redirects to login with
+  `?next=` and returns there after login; an unfaked network call fails
+  loudly with an error that isn't a `requests` error. Normal tests cover the
+  home page, login (valid and wrong password), logout (and that it is
+  POST-only), the navbar, mismatched sign-up passwords, and flash messages
+  after sign-up, login, and logout. The suite went from 28 to 44 passing
+  tests, with the script tests unchanged. CLAUDE.md gained a Commands section
+  and the README gained run instructions.
+- **Deviations:**
+  - The user added extra normal tests to the approved TDD set.
+  - After the browser check, the user asked for a "Welcome back, <username>!"
+    message on every login. Done with a small `LoginView` subclass, with
+    tests that it shows after login, not after a failed login, and not on top
+    of the sign-up welcome.
+  - My own judgment calls, mentioned in the reports:
+    - added "Welcome, <username>! Your collection is ready." on sign-up and
+      "You've been logged out." on logout, so the flash test had real
+      messages to check
+    - used per-view `@login_required` instead of Django's
+      `LoginRequiredMiddleware`, because the middleware would also redirect
+      the Phase 6 API, which must return 401
+    - committed the built `static/css/tailwind.css` so the app is styled
+      right after cloning, and git-ignored the 111 MB binary
+- **Sideways:**
+  - The first sign-up RED crashed with `DoesNotExist` from `.get()` rather
+    than failing an assertion. I switched it to a `filter().first()`
+    existence assertion with the same meaning, noted as a mechanical repair.
+  - Ruff flagged the guard's exception name (N818), so it became
+    `NetworkAccessBlockedError`. Ruff also cleaned unused imports and quote
+    style in Django's generated files.
+  - A first Grep for the DaisyUI setting in the package returned nothing.
+    Listing the files and reading `config.py` found it.
+  - One PowerShell command failed on a quoting error and was redone with
+    Grep.
+  - The "Welcome back" tests were written alongside the code, not
+    test-first, since it was a requested change outside the approved TDD set.
+
 ## 2026-11-14 — Created the initial CLAUDE.md
 
 ### Prompts

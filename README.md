@@ -18,6 +18,26 @@ cp .env.example .env    # then put your email in .env
 asks. It is optional: without it the script prints a warning and still works.
 `.env` is ignored by git.
 
+## Running the web app (MyChapterCollection)
+
+```bash
+uv run python manage.py migrate
+uv run python manage.py tailwind build   # first run downloads the Tailwind binary
+uv run python manage.py runserver
+```
+
+Then open <http://127.0.0.1:8000/>. Use `uv run python manage.py tailwind runserver`
+instead to rebuild the CSS automatically while editing templates.
+
+Styling is Tailwind CSS + DaisyUI through `django-tailwind-cli`. With
+`TAILWIND_CLI_USE_DAISY_UI = True` it downloads the standalone
+`tailwindcss-extra` binary (DaisyUI bundled) into `.django_tailwind_cli/`, so no
+Node.js or npm is needed. The theme lives in `styles/source.css`; the built
+`static/css/tailwind.css` is committed so the app is styled right after cloning.
+HTMX is a pinned local file at `static/js/htmx.min.js` (v2.0.4).
+
+`DJANGO_SECRET_KEY` can be set in `.env`; a development-only key is used otherwise.
+
 ## Scripts
 
 ### `scripts/search_books.py`: search Open Library from the console
@@ -43,7 +63,9 @@ uv run ruff format .     # format
 ```
 
 The tests replace `requests.get` with fakes, so they check the no-results and
-failure messages without touching the network.
+failure messages without touching the network. An autouse fixture in
+`tests/conftest.py` blocks sockets, so any test that forgets to fake a request
+fails with "Network access is blocked in tests".
 
 ### Manual checklist for `search_books.py`
 
